@@ -16,8 +16,8 @@ struct CarTaxController: RouteCollection {
 
     // MARK: Properties
 
-    let retrieveJSessionIdUrl = "http://infobollo.regione.veneto.it/tributi/tassaAuto/sta/stasiba/datiPerCalcolo.do"
-    let performTaxCarUrl = "http://infobollo.regione.veneto.it/tributi/tassaAuto/sta/stasiba/eseguiCalcoloTassa.do"
+    let retrieveJSessionIdUrl = "https://infobollo.regione.veneto.it/tributi/tassaAuto/sta/stasiba/datiPerCalcolo.do"
+    let performTaxCarUrl = "https://infobollo.regione.veneto.it/tributi/tassaAuto/sta/stasiba/eseguiCalcoloTassa.do"
 
     // MARK: Methods
 

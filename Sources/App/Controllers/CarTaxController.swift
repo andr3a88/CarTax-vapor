@@ -40,8 +40,10 @@ struct CarTaxController: RouteCollection {
         let body = HTTPBody(string: "modoScadenza=P&dataPagamento=31%2F12%2F2019&idCFProprietario=&cognDen=&nome=&tipoVeicolo=A&targa=\(plate)&meseScadenza=&annoScadenza=&meseValid=&calcola=Calcola")
 
         return try req.client().get(retrieveJSessionIdUrl, headers: headers).flatMap {  response in
+            let receivedCookies = response.http.cookies
             print(response.debugDescription)
             return try response.client().post(self.performTaxCarUrl, headers: headers, beforeSend: { (request) in
+                request.http.cookies = receivedCookies
                 request.http.body = body
             }).then({ (response) -> EventLoopFuture<ItemResponse<CarTax>> in
                 do {

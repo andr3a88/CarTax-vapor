@@ -40,14 +40,15 @@ struct CarTaxController: RouteCollection {
         let body = HTTPBody(string: "modoScadenza=P&dataPagamento=31%2F12%2F2019&idCFProprietario=&cognDen=&nome=&tipoVeicolo=A&targa=\(plate)&meseScadenza=&annoScadenza=&meseValid=&calcola=Calcola")
 
         return try req.client().get(retrieveJSessionIdUrl, headers: headers).flatMap {  response in
-            let receivedCookies = response.http.cookies
-            print(response.debugDescription)
+            let containsCookies = response.http.cookies.all.contains {   $0.key == "JSESSIONID" }
+
             return try response.client().post(self.performTaxCarUrl, headers: headers, beforeSend: { (request) in
-                request.http.cookies = receivedCookies
+                if containsCookies {
+                    request.http.cookies = response.http.cookies
+                }
                 request.http.body = body
             }).then({ (response) -> EventLoopFuture<ItemResponse<CarTax>> in
                 do {
-                    print(response.debugDescription)
                     guard let body = try SwiftSoup.parse(response.debugDescription).body(), let carTax = self.parse(body: body) else {
                         return response.future(error: VaporError(identifier: "parsing_data_error", reason: "Error parsing tax or due date"))
                     }

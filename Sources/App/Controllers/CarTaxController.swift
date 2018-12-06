@@ -12,12 +12,15 @@ struct PlateParam: Content {
     var plate: String?
 }
 
-struct CarTaxController: RouteCollection {
+class CarTaxController: RouteCollection {
 
     // MARK: Properties
 
     let retrieveJSessionIdUrl = "https://infobollo.regione.veneto.it/tributi/tassaAuto/sta/stasiba/datiPerCalcolo.do"
     let performTaxCarUrl = "https://infobollo.regione.veneto.it/tributi/tassaAuto/sta/stasiba/eseguiCalcoloTassa.do"
+
+    var cookies: HTTPCookies = HTTPCookies()
+    var sessionId: String = ""
 
     // MARK: Methods
 
@@ -39,15 +42,17 @@ struct CarTaxController: RouteCollection {
         let headers = HTTPHeaders([("Content-Type", "application/x-www-form-urlencoded")])
         let body = HTTPBody(string: "modoScadenza=P&dataPagamento=31%2F12%2F2019&idCFProprietario=&cognDen=&nome=&tipoVeicolo=A&targa=\(plate)&meseScadenza=&annoScadenza=&meseValid=&calcola=Calcola")
 
-        return try req.client().get(retrieveJSessionIdUrl, headers: headers).flatMap {  response in
-            let containsCookies = response.http.cookies.all.contains {   $0.key == "JSESSIONID" }
-
-            return try response.client().post(self.performTaxCarUrl, headers: headers, beforeSend: { (request) in
-                if containsCookies {
-                    request.http.cookies = response.http.cookies
-                }
+        return try req.client().get(retrieveJSessionIdUrl, headers: headers).flatMap { response in
+            let containsCookies = response.http.cookies.all.contains { $0.key == "JSESSIONID" }
+            if containsCookies {
+                self.cookies = response.http.cookies
+            }
+            self.cookies.all["LBLSESSIONID"] = self.cookies.all.first { $0.key == "LBLSESSIONID"}?.value
+            return try req.client().post(self.performTaxCarUrl, headers: headers, beforeSend: { (request) in
+                request.http.cookies = self.cookies
                 request.http.body = body
             }).then({ (response) -> EventLoopFuture<ItemResponse<CarTax>> in
+                print(response.description)
                 do {
                     guard let body = try SwiftSoup.parse(response.debugDescription).body(), let carTax = self.parse(body: body) else {
                         return response.future(error: VaporError(identifier: "parsing_data_error", reason: "Error parsing tax or due date"))

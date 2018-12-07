@@ -20,7 +20,6 @@ class CarTaxController: RouteCollection {
     let performTaxCarUrl = "https://infobollo.regione.veneto.it/tributi/tassaAuto/sta/stasiba/eseguiCalcoloTassa.do"
 
     var cookies: HTTPCookies = HTTPCookies()
-    var sessionId: String = ""
 
     // MARK: Methods
 
@@ -47,10 +46,12 @@ class CarTaxController: RouteCollection {
             if containsCookies {
                 self.cookies = response.http.cookies
             }
-            self.cookies.all["LBLSESSIONID"] = self.cookies.all.first { $0.key == "LBLSESSIONID"}?.value
             return try req.client().post(self.performTaxCarUrl, headers: headers, beforeSend: { (request) in
                 request.http.cookies = self.cookies
                 request.http.body = body
+                for cookie in self.cookies.all {
+                    print("Second request Cookies: key: \(cookie.key) \(cookie.value)")
+                }
             }).then({ (response) -> EventLoopFuture<ItemResponse<CarTax>> in
                 print(response.description)
                 do {
@@ -75,6 +76,11 @@ class CarTaxController: RouteCollection {
         let powerKw = try? body.getElementById("potenzaeffettiva")?.nextElementSibling()?.text()
         let registrationDate = try? body.getElementById("dataimmatricolazione")?.nextElementSibling()?.text()
         let fuelType = try? body.getElementById("alimentazione")?.nextElementSibling()?.text()
+        print("taxValue \(taxValue)")
+        print("dueDate \(dueDate)")
+        print("powerKw \(powerKw)")
+        print("registrationDate \(registrationDate)")
+        print("fuelType \(fuelType)")
         if let tax = taxValue?.nilIfEmpty, let date = dueDate?.nilIfEmpty, let fuelType = fuelType?.nilIfEmpty,
             let powerKw = powerKw?.nilIfEmpty, let registrationDate = registrationDate?.nilIfEmpty {
             return CarTax(taxValue: tax,

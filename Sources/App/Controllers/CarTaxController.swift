@@ -49,11 +49,7 @@ class CarTaxController: RouteCollection {
             return try req.client().post(self.performTaxCarUrl, headers: headers, beforeSend: { (request) in
                 request.http.cookies = self.cookies
                 request.http.body = body
-                for cookie in self.cookies.all {
-                    print("Second request Cookies: key: \(cookie.key) \(cookie.value)")
-                }
             }).then({ (response) -> EventLoopFuture<ItemResponse<CarTax>> in
-                print(response.description)
                 do {
                     guard let body = try SwiftSoup.parse(response.debugDescription).body(), let carTax = self.parse(body: body) else {
                         return response.future(error: VaporError(identifier: "parsing_data_error", reason: "Error parsing tax or due date"))
@@ -76,11 +72,6 @@ class CarTaxController: RouteCollection {
         let powerKw = try? body.getElementById("potenzaeffettiva")?.nextElementSibling()?.text()
         let registrationDate = try? body.getElementById("dataimmatricolazione")?.nextElementSibling()?.text()
         let fuelType = try? body.getElementById("alimentazione")?.nextElementSibling()?.text()
-        print("taxValue \(taxValue)")
-        print("dueDate \(dueDate)")
-        print("powerKw \(powerKw)")
-        print("registrationDate \(registrationDate)")
-        print("fuelType \(fuelType)")
         if let tax = taxValue?.nilIfEmpty, let date = dueDate?.nilIfEmpty, let fuelType = fuelType?.nilIfEmpty,
             let powerKw = powerKw?.nilIfEmpty, let registrationDate = registrationDate?.nilIfEmpty {
             return CarTax(taxValue: tax,

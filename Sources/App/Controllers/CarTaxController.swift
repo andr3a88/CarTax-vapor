@@ -38,8 +38,10 @@ class CarTaxController: RouteCollection {
             return req.future(error: VaporError(identifier: "plate_not_valid", reason: "The plate may be invalid"))
         }
 
+        let currentYear = Date().year
+
         let headers = HTTPHeaders([("Content-Type", "application/x-www-form-urlencoded")])
-        let body = HTTPBody(string: "modoScadenza=P&dataPagamento=31%2F12%2F2019&idCFProprietario=&cognDen=&nome=&tipoVeicolo=A&targa=\(plate)&meseScadenza=&annoScadenza=&meseValid=&calcola=Calcola")
+        let body = HTTPBody(string: "modoScadenza=P&dataPagamento=31%2F12%2F\(currentYear)&idCFProprietario=&cognDen=&nome=&tipoVeicolo=A&targa=\(plate)&meseScadenza=&annoScadenza=&meseValid=&calcola=Calcola")
 
         return try req.client().get(retrieveJSessionIdUrl, headers: headers).flatMap { response in
             let containsCookies = response.http.cookies.all.contains { $0.key == "JSESSIONID" }
@@ -81,6 +83,44 @@ class CarTaxController: RouteCollection {
                           fuelType: fuelType)
         }
         return nil
+    }
+}
+
+private extension Date {
+
+    var year: Int {
+        return getComponent(.year)
+    }
+
+    var month: Int {
+        return getComponent(.month)
+    }
+
+    var weekMonth: Int {
+        return getComponent(.weekOfMonth)
+    }
+
+    var days: Int {
+        return getComponent(.day)
+    }
+
+    var hours: Int {
+        return getComponent(.hour)
+    }
+
+    var minutes: Int {
+        return getComponent(.minute)
+    }
+
+    var seconds: Int {
+        return getComponent(.second)
+    }
+
+    private func getComponent (_ component: Calendar.Component) -> Int {
+        let calendar = Foundation.Calendar.current
+        let unitFlags = Set<Calendar.Component>([component])
+        let components = calendar.dateComponents(unitFlags, from: self)
+        return components.value(for: component)!
     }
 }
 

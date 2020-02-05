@@ -72,8 +72,8 @@ class CarTaxController: RouteCollection {
         let powerKw = try? body.getElementById("potenzaeffettiva")?.nextElementSibling()?.text()
         let registrationDate = try? body.getElementById("dataimmatricolazione")?.nextElementSibling()?.text()
         let fuelType = try? body.getElementById("alimentazione")?.nextElementSibling()?.text()
-        if let tax = taxValue?.nilIfEmpty, let date = dueDate?.nilIfEmpty, let fuelType = fuelType?.nilIfEmpty,
-            let powerKw = powerKw?.nilIfEmpty, let registrationDate = registrationDate?.nilIfEmpty {
+        if let tax = taxValue.nilIfEmpty, let date = dueDate.nilIfEmpty, let fuelType = fuelType.nilIfEmpty,
+            let powerKw = powerKw.nilIfEmpty, let registrationDate = registrationDate.nilIfEmpty {
             return CarTax(taxValue: tax,
                           dueDate: date,
                           powerKw: powerKw,

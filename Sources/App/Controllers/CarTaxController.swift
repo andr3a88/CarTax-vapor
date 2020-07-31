@@ -23,42 +23,46 @@ class CarTaxController: RouteCollection {
 
     // MARK: Methods
 
-    func boot(router: Router) throws {
-        let routes = router.grouped("api", "bollo")
+    func boot(routes: RoutesBuilder) throws {
+        let routes = routes.grouped("api", "bollo")
         routes.get(use: carTaxHandler)
     }
 
-    func carTaxHandler(_ req: Request) throws -> Future<ItemResponse<CarTax>> {
+
+    func carTaxHandler(_ req: Request) throws -> EventLoopFuture<ItemResponse<CarTax>> {
 
         let param = try req.query.decode(PlateParam.self)
         guard let plate = param.plate else {
-            return req.future(error: VaporError(identifier: "plate_not_found", reason: "Missing parameter plate"))
+            return req.eventLoop.future(error: Abort(.badRequest, reason: "Missing parameter plate"))
         }
         if plate.count != 7 {
-            return req.future(error: VaporError(identifier: "plate_not_valid", reason: "The plate may be invalid"))
+            return req.eventLoop.future(error: Abort(.badRequest, reason: "The plate may be invalid"))
         }
 
-        let currentYear = Date().year
-
         let headers = HTTPHeaders([("Content-Type", "application/x-www-form-urlencoded")])
-        let body = HTTPBody(string: "modoScadenza=P&dataPagamento=31%2F12%2F\(currentYear)&idCFProprietario=&cognDen=&nome=&tipoVeicolo=A&targa=\(plate)&meseScadenza=&annoScadenza=&meseValid=&calcola=Calcola")
 
-        return try req.client().get(retrieveJSessionIdUrl, headers: headers).flatMap { response in
-            let containsCookies = response.http.cookies.all.contains { $0.key == "JSESSIONID" }
-            if containsCookies {
-                self.cookies = response.http.cookies
+        let currentYear = Date().year
+        let body = """
+        modoScadenza=P&dataPagamento=31%2F12%2F\(currentYear)&\
+        idCFProprietario=&cognDen=&nome=&tipoVeicolo=A&targa=\(plate)&\
+        meseScadenza=&annoScadenza=&meseValid=&calcola=Calcola
+        """
+
+        return req.client.get(URI(string: retrieveJSessionIdUrl), headers: headers).flatMap { response in
+            if let cookies = response.headers.setCookie, cookies.all.contains(where: { $0.key == "JSESSIONID" }) == true {
+                self.cookies = cookies
             }
-            return try req.client().post(self.performTaxCarUrl, headers: headers, beforeSend: { (request) in
-                request.http.cookies = self.cookies
-                request.http.body = body
-            }).then({ (response) -> EventLoopFuture<ItemResponse<CarTax>> in
+            return req.client.post(URI(string: self.performTaxCarUrl), headers: headers, beforeSend: { (request) in
+                request.headers.cookie = self.cookies
+                request.body = ByteBuffer(data: body.data(using: .utf8)!)
+            }).flatMap({ (response) -> EventLoopFuture<ItemResponse<CarTax>> in
                 do {
-                    guard let body = try SwiftSoup.parse(response.debugDescription).body(), let carTax = self.parse(body: body) else {
-                        return response.future(error: VaporError(identifier: "parsing_data_error", reason: "Error parsing tax or due date"))
+                    guard let body = try SwiftSoup.parse(response.description).body(), let carTax = self.parse(body: body) else {
+                        return req.eventLoop.makeFailedFuture(Abort(.badRequest, reason: "Error parsing tax or due date"))
                     }
-                    return response.future(ItemResponse(item: carTax))
+                    return req.eventLoop.makeSucceededFuture(ItemResponse(item: carTax))
                 } catch {
-                    return response.future(error: VaporError(identifier: "parsing_body_error", reason: "Error parsing the page"))
+                    return req.eventLoop.makeFailedFuture(Abort(.badRequest, reason: "Error parsing the page"))
                 }
             })
         }

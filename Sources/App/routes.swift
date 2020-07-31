@@ -1,15 +1,15 @@
 import Vapor
 
 /// Register your application's routes here.
-public func routes(_ router: Router) throws {
+public func routes(_ app: Application) throws {
 
-    router.get { req in
+    app.get { req in
         return "Written with Swift Vapor"
     }
 
-    router.get("info") { req in
+    app.get("info") { req in
         return "Written with Swift Vapor"
     }
 
-    try router.register(collection: CarTaxController())
+    try app.register(collection: CarTaxController())
 }
